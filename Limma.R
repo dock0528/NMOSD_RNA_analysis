@@ -1,17 +1,19 @@
 setwd("C:/Users/JANE/Desktop/Wang實驗室/NMOSD研究計畫/RNA/NMOSD_RNA_analysis")
 
+###############################【DEGs:Limma+Vomm】###############################
 #載入套件
 BiocManager::install(c("edgeR","limma"))
 library(limma)
 library(edgeR)
 
-
+########################{原始gene matrix}########################
 Raw_count_merged<-read.csv('./RNA_DATA/Raw_count_merged_matrix.csv',row.names = 1,header=T) #dim(Raw_count_merged):78724 x 21
 
 #Raw count 
 count_df<-as.matrix(Raw_count_merged)
 rownames(count_df)<-gsub("\\.\\d+$", "",rownames(count_df)) #去除小數點以後的值
 
+########################{Sample metadata}########################
 #Sample & Group
 sample_df=data.frame(Sample=colnames(count_df))
 sample_df$Group <- ifelse(
@@ -33,11 +35,16 @@ dge  <- dge[keep, , keep.lib.sizes=FALSE] #[保留TRUE的列，所有欄,參數]
 #keep.lib.sizes=FALSE不沿用原本的gene sizes，改用filter過後的
 
 #----【TMM（Trimmed Mean of M-values）】----
+#目的:校正不同樣本間因測序深度或組成偏差所帶來的系統性差異
 #Step1.消除極端表達基因的影響
 #Step2.估算每個樣本的「有效 library size」
 #Step3.使樣本間的基因表達量可直接比較
 dge <- calcNormFactors(dge,method = 'TMM')    # TMM 標準化
 
+
+########################{Voom兩步驟}########################
+#轉成log2CPM -> 讓基因可以在不同cell做比較
+#將低變異度的genes變異度變小(RNA-seq:低豐度基因的變異通常比高豐度基因大)
 
 #----【Voom轉換】----
 #建立 design matrix（不含截距，以 Control 作 baseline）
@@ -127,7 +134,7 @@ DEGS<-row.names(subset(Allgene,adj.P.Val<0.01 & abs(logFC)>2)) #DEGs numbers:146
 write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(limma).csv',row.names = F)
 
 
-###############【Batch Effect Correction】###############
+###############【Housekeeping Genes Map to Original Gene Matrix】###############
 #----取RefSeq
 housekeeping_genes_df<-read.csv('./RNA_DATA/Housekeeping_genes(3804).csv',header=T)
 housekeeping_genes<-housekeeping_genes_df$RefSeq.accession.number 
@@ -178,7 +185,7 @@ dup_refseq <- unique(housekeeping_genes_ENSG_dropna$ensembl_gene_id[ duplicated(
 # 取出重複RefSeq的列
 dup_refseq_rows<- housekeeping_genes_ENSG_dropna[housekeeping_genes_ENSG_dropna$ensembl_gene_id %in% dup_refseq, ]
 
-########{Control genes}########
+#####################{Control genes}#####################
 #----housekeeping ENSG(無NA,無duplicate ENSG)
 housekeeping_genes_ENSG_dropna<- read.csv('RNA_DATA/Housekeeping_genes_ENSG_dropna.csv') #row:4267 (有2個重複的ENSG)
 housekeeping_ENSG <- housekeeping_genes_ENSG_dropna$ensembl_gene_id[! duplicated(housekeeping_genes_ENSG_dropna$ensembl_gene_id)] #length(housekeeping_ENSG):4265
@@ -195,7 +202,8 @@ rownames(count_df)<-gsub("\\.\\d+$", "",rownames(count_df)) #去除小數點以�
 control_genes<-intersect(rownames(count_df),housekeeping_ENSG) #length(control_genes):3776
 control_genes_df <- housekeeping_ENSG_dropna_dropdup[housekeeping_ENSG_dropna_dropdup$ensembl_gene_id %in%control_genes, ] #nrow(control_genes_df):3776
 #write.csv(control_genes_df,file = 'RNA_DATA/control_genes_df.csv',row.names =F)
-#####################【Svaseq+SSVA】#####################
+
+###############【DEGs:Limma+Vomm (Batch Effect Correction)】###############
 #BiocManager::install("sva")
 library(sva)
 library(limma)
@@ -248,7 +256,8 @@ control_genes_df<-read.csv('RNA_DATA/control_genes_df.csv')
 control_genes_ENSG<-control_genes_df$ensembl_gene_id #3776
 control_genes <- rownames(log2cpm_matrix ) %in% control_genes_ENSG
 
-# —— 自動估 surrogate variables 的個數 ——  
+#####################{Svaseq+SSVA}#####################
+#----自動估 surrogate variables 的個數
 n.sv <- num.sv(log2cpm_matrix , mod, method = "leek")   #多少個batch effect要校正
 
 #----執行 supervised SVA(ssva)
@@ -258,14 +267,14 @@ sv_result <- ssva(
   n.sv      = n.sv  
 )  
 colnames(sv_result$sv) <- paste0("SV", seq_len(ncol(sv_result$sv))) #加SV欄位名 'SV1' & 'SV2'
-# —— 把 sv 加回 design ——  
+#----把 sv 加回 design 
 design_sv <- cbind(mod, sv_result$sv)  
 
-# —— 重新跑 voom + lmFit（用含 sv 的 design）——  
+#-----重新跑 voom + lmFit（用含 sv 的 design） 
 v2   <- voom(dge, design_sv, plot = TRUE)  
 fit2 <- lmFit(v2, design_sv)  
 
-# —— 再做 contrasts + eBayes ——  
+#----再做 contrasts + eBayes
 contrast.matrix <- makeContrasts(  
   NMOSD_vs_Control = NMOSD - Control,  
   levels           = design_sv  
@@ -273,7 +282,7 @@ contrast.matrix <- makeContrasts(
 fit2 <- contrasts.fit(fit2, contrast.matrix)  
 fit2 <- eBayes(fit2)  
 
-# —— 最後拿結果 ——  
+#----產生全基因結果（不排序）
 Allgene_sva <- topTable(  
   fit2,  
   coef         = "NMOSD_vs_Control",  
@@ -282,7 +291,7 @@ Allgene_sva <- topTable(
   sort.by      = "none"  
 )
 
-#########【DEGs criteria: adjust.P<0.05,abs(log2FC)>1】########
+#################【DEGs criteria: adjust.P<0.05,abs(log2FC)>1】#################
 # Allgene 欄位含 logFC, P.Value, adj.P.Val
 # 先把原本的 par 設定存起來，最後再還原
 op <- par(no.readonly = TRUE) # no.readonly = TRUE:full list of parameters 
@@ -331,6 +340,7 @@ Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC > 1)) #length(Up_DE
 Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
 DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
 
+#################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
 #用原始pvalue取DEGs
 DEG_sva<- subset(
@@ -345,10 +355,10 @@ Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs)
 Down_DEGs<-row.names(subset(DEG_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
 DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
 #write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(Batch Effect Correction).csv',row.names = F)
-#----------------------------------
+#--------------------------------------------------
 
 
-#########【DEGs criteria: adjust.P<0.01,abs(log2FC)>2】########
+#################【DEGs criteria: adjust.P<0.01,abs(log2FC)>2】#################
 
 op <- par(no.readonly = TRUE) # no.readonly = TRUE:full list of parameters 
 
@@ -396,6 +406,7 @@ Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC > 2)) #length(Up_DE
 Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):12
 DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #DEGs numbers:51
 
+#################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
 #用原始pvalue取DEGs
 DEG_sva<- subset(
