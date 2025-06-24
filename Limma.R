@@ -95,7 +95,7 @@ par(mar = c(5, 4, 4, 6) , xpd = TRUE) #c(bottom, left, top, right)
 with(Allgene, plot(
   logFC, -log10(P.Value),
   pch   = 20,
-  main  = "NMOSD RNA DEGs",
+  main  = "NMOSD vs Healthy DEGs",
   xlim=c(-15,15),
   col   = "grey",
   xlab  = "log2 Fold Change",
@@ -303,7 +303,7 @@ par(mar = c(5, 4, 4, 6) , xpd = TRUE) #c(bottom, left, top, right)
 with(Allgene_sva, plot(
   logFC, -log10(P.Value),
   pch   = 20,
-  main  = "NMOSD RNA DEGs after batch effect correction",
+  main  = "NMOSD vs Healthy DEGs (Batch Effect Correction)",
 #  xlim=c(-15,15),
   col   = "grey",
   xlab  = "log2 Fold Change",
@@ -369,7 +369,7 @@ par(mar = c(5, 4, 4, 6) , xpd = TRUE) #c(bottom, left, top, right)
 with(Allgene_sva, plot(
   logFC, -log10(P.Value),
   pch   = 20,
-  main  = "NMOSD RNA DEGs after batch effect correction",
+  main  = "NMOSD vs Healthy DEGs (Batch Effect Correction)",
   #  xlim=c(-15,15),
   col   = "grey",
   xlab  = "log2 Fold Change",
