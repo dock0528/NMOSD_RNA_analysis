@@ -22,7 +22,6 @@ DEG_genes[!DEG_genes %in% DEG_genes_df$ENSEMBL]
 
 #重複的ENSG(1個ENSG:2個ENTREZID:2個SYMBOL)
 dup_ENSGs<-DEG_genes_df[duplicated(DEG_genes_df$ENSEMBL),]$ENSEMBL
-DEG_genes_df[DEG_genes_df$ENSEMBL %in% dup_ENSGs,]
 
 #重複的ENTREZID(0個)
 dup_ENTREZIDs<-DEG_genes_df[duplicated(DEG_genes_df$ENTREZID),]$ENTREZID
@@ -34,6 +33,18 @@ DEG_genes_df[DEG_genes_df$SYMBOL %in% dup_SYMBOLs,]
 
 ###DEG ENTREZID資料集
 DEG_genes<-DEG_genes_df$ENTREZID
+
+#取和MsigDB有交集的type l interferon genes
+type_l_interferons<-read.csv('RNA_DATA/type l interferon gene list (MsigDB).csv',header=T)
+interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,type_l_interferons$Gene) #交集後的"IRF7"
+#交集>>>ENSG00000185507:3665:IRF7
+
+#-----------{Strictly DEGs}----------------
+strict_DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_strictly(Batch Effect Correction).csv',header=T)
+strict_DEGs_genes<-strict_DEGs_df$x
+strict_DEGs_genes_df<-bitr(strict_DEGs_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
+#轉成ENTREZID & SYMBOL (從51DEGs -> 52DEGs)
+interferon_in_strict_DEGs<-intersect(strict_DEGs_genes_df$SYMBOL,type_l_interferons$Gene) #沒交集
 
 #--------------【GO(MF)】------------------
 #進行 enrichGO 富集分析
