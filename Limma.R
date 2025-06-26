@@ -166,6 +166,31 @@ housekeeping_genes_ENSG_df <- merge(
 #length(housekeeping_genes_ENSG_df$ensembl_gene_id):4292 (含NA、duplicate ENSG)
 #write.csv(housekeeping_genes_ENSG_df,file='RNA_DATA/Housekeeping_genes_ENSG.csv',row.names = F)
 
+#-----{ENSEMBL:處理NA的row}
+housekeeping_genes_ENSG_df<- read.csv('RNA_DATA/Housekeeping_genes_ENSG.csv')
+ensembl_NA_row<-read.csv('RNA_DATA/Ensembl_housekeeping_genes_NA.csv')
+colnames(ensembl_NA_row)[3]<-"ensembl_gene_id"
+
+# 去除空白
+housekeeping_genes_ENSG_df$Gene.Name<- trimws(housekeeping_genes_ENSG_df$Gene.Name)
+ensembl_NA_row$HGNC.symbol<- trimws(ensembl_NA_row$HGNC.symbol)
+
+ensembl_sub  <- setNames(
+  ensembl_NA_row$ensembl_gene_id,
+  ensembl_NA_row$HGNC.symbol
+)
+
+#找出原 table 哪些列是 NA
+na_idx <- is.na(housekeeping_genes_ENSG_df$ensembl_gene_id)
+
+#只把 NA 那些行，用 Hugo Symbol 去取 ensembl_sub 裡的值
+housekeeping_genes_ENSG_df$ensembl_gene_id[na_idx] <-
+  ensembl_sub [housekeeping_genes_ENSG_df$Gene.Name[na_idx]]
+
+head(housekeeping_genes_ENSG_df)
+housekeeping_genes_ENSG_df[is.na(housekeeping_genes_ENSG_df$ensembl_gene_id),]
+#------------------------
+
 #---去除NA的row
 housekeeping_genes_ENSG_dropna <- housekeeping_genes_ENSG_df[ !is.na(housekeeping_genes_ENSG_df$ensembl_gene_id), ]
 # length(housekeeping_genes_ENSG_dropna$ensembl_gene_id):4267 (含duplicate ENSG)
@@ -204,7 +229,7 @@ control_genes_df <- housekeeping_ENSG_dropna_dropdup[housekeeping_ENSG_dropna_dr
 #write.csv(control_genes_df,file = 'RNA_DATA/control_genes_df.csv',row.names =F)
 
 ###############【DEGs:Limma+Vomm (Batch Effect Correction)】###############
-#BiocManager::install("sva")
+BiocManager::install("sva")
 library(sva)
 library(limma)
 library(edgeR)
