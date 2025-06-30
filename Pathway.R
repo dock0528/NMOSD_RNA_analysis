@@ -35,9 +35,27 @@ DEG_genes_df[DEG_genes_df$SYMBOL %in% dup_SYMBOLs,]
 DEG_genes<-DEG_genes_df$ENTREZID
 
 #取和MsigDB有交集的type l interferon genes
-type_l_interferons<-read.csv('RNA_DATA/type l interferon gene list (MsigDB).csv',header=T)
-interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,type_l_interferons$Gene) #交集後的"IRF7"
-#交集>>>ENSG00000185507:3665:IRF7
+type_I_interferons<-read.csv('RNA_DATA/Type I Interferon gene list(MsigDB).csv',header=T) #Type I Interferon gene list:7935個
+interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,type_I_interferons$Type.I.Interferon.genes) #和DEGs交集有165
+reference_interferon_genes <- c(
+  "IL1RN", "IFIT5", "IFIT3", "IFIT2", "IFI6", "HERC5",
+  "CMPK2", "IFIT1", "MX1", "ISG15", "OASL", "RSAD2",
+  "IFI44L", "OAS3", "IFI44", "XAF1", "EIF2AK2", "LAP3",
+  "LY6E", "OAS2", "OAS1", "USP18", "HERC6", "SIGLEC1",
+  "IFI27") #原始3個csv交集出共同的Type I Interferon
+interferon_with_reference<-intersect(interferon_in_DEGs,reference_interferon_genes)
+
+
+#----Refernce:Other_therapy vs healthy DEGs
+reference_other_therapy_IFNs<-read.csv('RNA_DATA/Other_therapy_healthy_DEGs_v2.csv',header=T)
+interferon_in_other_therapy<-intersect(reference_other_therapy_IFNs$Gene,type_I_interferons$Type.I.Interferon.genes)#62
+interferon_with_other_therapy<-intersect(interferon_in_DEGs,interferon_in_other_therapy)#無交集
+
+#----Refernce:Other_therapy vs healthy DEGs
+reference_untreat_IFNs<-read.csv('RNA_DATA/Untreat_healthy_DEGs_v2.csv',header=T)
+interferon_in_untreat<-intersect(reference_untreat_IFNs$Gene,type_I_interferons$Type.I.Interferon.genes)#51
+interferon_with_untreat<-intersect(interferon_in_DEGs,interferon_in_untreat)#無交集
+
 
 #-----------{Strictly DEGs}----------------
 strict_DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_strictly(Batch Effect Correction).csv',header=T)
@@ -70,6 +88,7 @@ barplot(ego_MF,showCategory=20,title='EnrichmentGO_MF_bar',label_format = 100)
 #過濾
 ego_fil<-simplify(ego_MF,cutoff=0.5,by='pvalue',select_fun = match.fun("min"))
 View(ego_fil@result)
+
 
 #---------------------------------------------
 
