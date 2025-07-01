@@ -195,7 +195,7 @@ control_genes_df <- housekeeping_genes_ENSG_df[housekeeping_genes_ENSG_df$ensemb
 
 
 ###############【DEGs:Limma+Vomm (Batch Effect Correction)】###############
-BiocManager::install("sva")
+#BiocManager::install("sva")
 library(sva)
 library(limma)
 library(edgeR)
@@ -247,7 +247,7 @@ mod0 <- model.matrix(~ 1, sample_df)          # null model（只含截距）
 #----載入control genes
 control_genes_df<-read.csv('RNA_DATA/control_genes_df_for_calibration.csv')
 control_genes_ENSG<-control_genes_df$ensembl_gene_id #11
-control_genes <- rownames(log2cpm_matrix ) %in% control_genes_ENSG
+control_genes <- rownames(log2cpm_matrix) %in% control_genes_ENSG
 
 
 ###########{畫11個housekeeping genes在NMOSD log2CPM的分布}###########
@@ -258,6 +258,7 @@ log2cpm_control_genes_matrix<-log2cpm_matrix[rownames(log2cpm_matrix) %in% contr
 NMOSD_cols <- grepl("Patient", colnames(log2cpm_control_genes_matrix))
 NM0SD_log2cpm_control_genes_matrix<-log2cpm_control_genes_matrix[,NMOSD_cols]
 
+
 #----寬Matrix >>> 長Matrix
 long_NMOSD_log2cpm <- melt(
   log2cpm_control_genes_matrix[, NMOSD_cols, drop = FALSE],
@@ -265,7 +266,15 @@ long_NMOSD_log2cpm <- melt(
   value.name  = "Log2CPM"
 )
 
-#----boxplot distribution in NMOSD patients
+#----將patient10_2T放在最尾端
+library(forcats) #重新調整 factor的層級順序
+long_NMOSD_log2cpm$Sample <- fct_relevel(
+  long_NMOSD_log2cpm$Sample,
+  "Patient10_2T",
+  after = Inf    #Inf:最尾端
+)
+
+#----畫boxplot distribution in NMOSD patients
 ggplot(long_NMOSD_log2cpm, aes(x = Sample, y = Log2CPM)) +
   geom_boxplot(fill = "#EDABC0", outlier.size = 0.5, width = 0.6) +
   theme_bw() +
@@ -284,51 +293,51 @@ pw <- pairwise.wilcox.test(long_NMOSD_log2cpm$Log2CPM,
                            long_NMOSD_log2cpm$Sample,
                            paired = TRUE,
                            p.adjust.method = "BH")
-####################################################
-#取pavlue
+
+#----取pavlue
 p.mat <- pw$p.value
 
-#對角設NA
-diag(p.mat) <- 1
-
-#畫Heatmap
-library(pheatmap)
-pheatmap(p.mat,
-         display_numbers = TRUE,      #顯示數字
-         number_format   = "%.3f",    #數字format
-         cluster_rows    = FALSE,
-         cluster_cols    = FALSE,
-         na_col          = "white",       # the color of the NA cell
-         main            = "Heatmap of 11 Housekeeping genes log2CPM acorss NMOSD patients",
-         color           = colorRampPalette(c("#74C7EA","white","#E67884"))(50))
-
-
-library(pheatmap)
-
-# 原始 p 值矩阵
-# diag(p.mat) <- NA  # 如果你还想把对角也设成 NA
-
-# 1) 构造标签矩阵：非 NA 就格式化，NA 就 ""
-label_mat <- matrix(
-  ifelse(is.na(p.mat), "",
-         sprintf("%.3f", p.mat)),
-  nrow      = nrow(p.mat),
-  ncol      = ncol(p.mat),
-  dimnames  = dimnames(p.mat)
+#----建一個 k×k 的全空矩陣
+samples <- levels(long_NMOSD_log2cpm$Sample)
+p.full <- matrix(
+  NA,
+  nrow = length(samples),
+  ncol = length(samples),
+  dimnames = list(samples,samples)
 )
 
-# 2) 画图，用 display_numbers=label_mat
+#----把三角矩陣填到對應位置
+p.full[rownames(p.mat), colnames(p.mat)] <- p.mat 
+
+
+#----斜對角設為1
+diag(p.full) <- 1
+
+#----將NA轉""
+label_matrix <- matrix(
+  ifelse(is.na(p.full), "",
+         sprintf("%.3f", p.full)), #sprintf數值轉字串
+  nrow      = nrow(p.full),
+  ncol      = ncol(p.full),
+  dimnames  = dimnames(p.full)
+)
+
+
+#----畫Heatmap
+library(pheatmap)
 pheatmap(
-  p.mat,
-  display_numbers = label_mat,               # 自定义标签
+  p.full,
+  display_numbers = label_matrix, #自行定義的標籤              
   number_color    = "black",
   cluster_rows    = FALSE,
   cluster_cols    = FALSE,
-  na_col          = "white",                 # NA 格子的底色
+  na_col          = "white",                 # NA格子的底色
   main            = "Heatmap of 11 Housekeeping genes log2CPM across NMOSD patients",
   color           = colorRampPalette(c("#74C7EA","white","#E67884"))(50),
-  fontsize_number = 8
+  fontsize_number = 9
 )
+
+
 #####################{Svaseq+SSVA}#####################
 #----自動估 surrogate variables 的個數
 n.sv <- num.sv(log2cpm_matrix , mod, method = "leek")   #多少個batch effect要校正
@@ -409,9 +418,9 @@ legend("topright",
 par(op)
 
 #顯著基因
-Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC > 1)) #length(Up_DEGs):197
-Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
+Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC > 1)) #length(Up_DEGs):1796
+Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):1451
+DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #length(DEGS):3247
 
 #################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
@@ -424,10 +433,10 @@ DEG_sva<- subset(
 DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 
 #顯著基因(BH校正後)
-Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs):197
-Down_DEGs<-row.names(subset(DEG_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
-#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(Batch Effect Correction).csv',row.names = F)
+Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs):1796
+Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.05 & logFC < -1)) #length(Down_DEGs):1451
+DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.05 & abs(logFC)>1)) #length(DEGS):3247
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_11housekeeping_genes(Batch Effect Correction).csv',row.names = F)
 #--------------------------------------------------
 
 
@@ -475,9 +484,9 @@ legend("topright",
 par(op)
 
 #顯著基因
-Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC > 2)) #length(Up_DEGs):39
-Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):12
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #DEGs numbers:51
+Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC > 2)) #length(Up_DEGs):972
+Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):692
+DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #length(DEGS):1664
 
 #################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
@@ -490,23 +499,15 @@ DEG_sva<- subset(
 DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 
 #顯著基因(BH校正後)
-Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.01 & logFC > 2)) #length(Up_DEGs):39
-Down_DEGs<-row.names(subset(DEG_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):12
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #DEGs numbers:51
-#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_strictly(Batch Effect Correction).csv',row.names = F)
+Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.01 & logFC > 2)) #length(Up_DEGs):972
+Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.01 & logFC < -2)) #length(Down_DEGs):692
+DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.01 & abs(logFC)>2)) #length(DEGS):1664
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_11housekeeping_genes_strictly(Batch Effect Correction).csv',row.names = F)
 
 
 
 
-
-
-
-
-
-
-
-
-#---------------------------------------------------------------------------------------------------------------------------------------------------
+##---------------------------------------------------------------------------------------------------------------------------------------------------
 ###############【Housekeeping Genes(3804) Map to Original Gene Matrix】###############
 #----取RefSeq
 housekeeping_genes_df<-read.csv('./RNA_DATA/Housekeeping_genes(3804).csv',header=T)
@@ -566,7 +567,7 @@ housekeeping_genes_ENSG_df[is.na(housekeeping_genes_ENSG_df$ensembl_gene_id),]
 
 #---去除NA的row
 housekeeping_genes_ENSG_dropna <- housekeeping_genes_ENSG_df[ !is.na(housekeeping_genes_ENSG_df$ensembl_gene_id), ]
-# length(housekeeping_genes_ENSG_dropna$ensembl_gene_id):4267 (含duplicate ENSG)
+# length(housekeeping_genes_ENSG_dropna$ensembl_gene_id):4280 (含duplicate ENSG)
 #write.csv(housekeeping_genes_ENSG_dropna,file='RNA_DATA/Housekeeping_genes_ENSG_dropna.csv',row.names = F)
 
 #----重複ENSG的row
@@ -587,8 +588,8 @@ dup_refseq_rows<- housekeeping_genes_ENSG_dropna[housekeeping_genes_ENSG_dropna$
 
 #####################{Control genes(3804)}#####################
 #----housekeeping ENSG(無NA,無duplicate ENSG)
-housekeeping_genes_ENSG_dropna<- read.csv('RNA_DATA/Housekeeping_genes_ENSG_dropna.csv') #row:4267 (有2個重複的ENSG)
-housekeeping_ENSG <- housekeeping_genes_ENSG_dropna$ensembl_gene_id[! duplicated(housekeeping_genes_ENSG_dropna$ensembl_gene_id)] #length(housekeeping_ENSG):4265
+housekeeping_genes_ENSG_dropna<- read.csv('RNA_DATA/Housekeeping_genes_ENSG_dropna.csv') #row:4280 (有2個重複的ENSG)
+housekeeping_ENSG <- housekeeping_genes_ENSG_dropna$ensembl_gene_id[! duplicated(housekeeping_genes_ENSG_dropna$ensembl_gene_id)] #length(housekeeping_ENSG):4278
 housekeeping_ENSG_dropna_dropdup <- housekeeping_genes_ENSG_dropna[! duplicated(housekeeping_genes_ENSG_dropna$ensembl_gene_id),]
 
 
@@ -599,12 +600,13 @@ count_df<-as.matrix(Raw_count_merged)
 rownames(count_df)<-gsub("\\.\\d+$", "",rownames(count_df)) #去除小數點以後的值 #gene:78724
 
 #----control genes
-control_genes<-intersect(rownames(count_df),housekeeping_ENSG) #length(control_genes):3776
-control_genes_df <- housekeeping_ENSG_dropna_dropdup[housekeeping_ENSG_dropna_dropdup$ensembl_gene_id %in%control_genes, ] #nrow(control_genes_df):3776
+control_genes<-intersect(rownames(count_df),housekeeping_ENSG) #length(control_genes):3788
+control_genes_df <- housekeeping_ENSG_dropna_dropdup[housekeeping_ENSG_dropna_dropdup$ensembl_gene_id %in%control_genes, ] #nrow(control_genes_df):3788
 #write.csv(control_genes_df,file = 'RNA_DATA/control_genes_df.csv',row.names =F)
 
+
 ###############【DEGs:Limma+Vomm (Batch Effect Correction)】###############
-BiocManager::install("sva")
+#BiocManager::install("sva")
 library(sva)
 library(limma)
 library(edgeR)
@@ -646,6 +648,7 @@ v <- voom(dge, design, plot = TRUE)
 # plot = TRUE 會畫出 mean-variance trend，可用來檢查變異度是否隨平均表達量下降
 
 # ----準備 dat & design
+#log2cpm目的:校正基因在不同樣本之間的差異
 log2cpm_matrix  <- v$E                           # voom 轉出的 log2-CPM matrix  
 mod  <- model.matrix(~ 0 + sample_df$Group)   # 你的原 design  
 colnames(mod) <- levels(sample_df$Group)      # Control, NMOSD  
@@ -653,8 +656,95 @@ mod0 <- model.matrix(~ 1, sample_df)          # null model（只含截距）
 
 #----載入control genes
 control_genes_df<-read.csv('RNA_DATA/control_genes_df.csv')
-control_genes_ENSG<-control_genes_df$ensembl_gene_id #3776
+control_genes_ENSG<-control_genes_df$ensembl_gene_id #3788
 control_genes <- rownames(log2cpm_matrix ) %in% control_genes_ENSG
+
+###########{畫3371個housekeeping genes在NMOSD log2CPM的分布}###########
+library(reshape2)
+library(ggplot2)
+
+log2cpm_control_genes_matrix<-log2cpm_matrix[rownames(log2cpm_matrix) %in% control_genes_ENSG,] #3371control genes(TMM filter low expression genes)
+NMOSD_cols <- grepl("Patient", colnames(log2cpm_control_genes_matrix))
+NM0SD_log2cpm_control_genes_matrix<-log2cpm_control_genes_matrix[,NMOSD_cols]
+
+
+#----寬Matrix >>> 長Matrix
+long_NMOSD_log2cpm <- melt(
+  log2cpm_control_genes_matrix[, NMOSD_cols, drop = FALSE],
+  varnames    = c("Gene", "Sample"),
+  value.name  = "Log2CPM"
+)
+
+#----將patient10_2T放在最尾端
+library(forcats) #重新調整 factor的層級順序
+long_NMOSD_log2cpm$Sample <- fct_relevel(
+  long_NMOSD_log2cpm$Sample,
+  "Patient10_2T",
+  after = Inf    #Inf:最尾端
+)
+
+#----畫boxplot distribution in NMOSD patients
+ggplot(long_NMOSD_log2cpm, aes(x = Sample, y = Log2CPM)) +
+  geom_boxplot(fill = "#EDABC0", outlier.size = 0.5, width = 0.6) +
+  theme_bw() +
+  theme(
+    axis.text.x  = element_text(hjust = 0.5, size = 8),
+    axis.title.x = element_blank(),
+    plot.title   = element_text(hjust = 0.5, face = "bold",size=14)  # 置中且加粗
+  ) +
+  labs(
+    y     = "log2(CPM)",
+    title = "3371 Housekeeping genes log2CPM acorss NMOSD patients"
+  )
+
+#----Heatmap of wilcox rank sum test between each other
+pw <- pairwise.wilcox.test(long_NMOSD_log2cpm$Log2CPM,
+                           long_NMOSD_log2cpm$Sample,
+                           paired = TRUE,
+                           p.adjust.method = "BH")
+
+#----取pavlue
+p.mat <- pw$p.value
+
+#----建一個 k×k 的全空矩陣
+samples <- levels(long_NMOSD_log2cpm$Sample)
+p.full <- matrix(
+  NA,
+  nrow = length(samples),
+  ncol = length(samples),
+  dimnames = list(samples,samples)
+)
+
+#----把三角矩陣填到對應位置
+p.full[rownames(p.mat), colnames(p.mat)] <- p.mat 
+
+
+#----斜對角設為1
+diag(p.full) <- 1
+
+#----將NA轉""
+label_matrix <- matrix(
+  ifelse(is.na(p.full), "",
+         sprintf("%.3f", p.full)), #sprintf數值轉字串
+  nrow      = nrow(p.full),
+  ncol      = ncol(p.full),
+  dimnames  = dimnames(p.full)
+)
+
+
+#----畫Heatmap
+library(pheatmap)
+pheatmap(
+  p.full,
+  display_numbers = label_matrix, #自行定義的標籤              
+  number_color    = "black",
+  cluster_rows    = FALSE,
+  cluster_cols    = FALSE,
+  na_col          = "white",                 # NA格子的底色
+  main            = "Heatmap of 3371 Housekeeping genes log2CPM across NMOSD patients",
+  color           = colorRampPalette(c("#74C7EA","white","#E67884"))(50),
+  fontsize_number = 9
+)
 
 #####################{Svaseq+SSVA}#####################
 #----自動估 surrogate variables 的個數
@@ -751,9 +841,9 @@ DEG_sva<- subset(
 DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 
 #顯著基因(BH校正後)
-Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs):197
-Down_DEGs<-row.names(subset(DEG_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
+Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs):202
+Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.05 & logFC < -1)) #length(Down_DEGs):112
+DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.05 & abs(logFC)>1)) # length(DEGS):314
 #write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(Batch Effect Correction).csv',row.names = F)
 #--------------------------------------------------
 
@@ -802,9 +892,9 @@ legend("topright",
 par(op)
 
 #顯著基因
-Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC > 2)) #length(Up_DEGs):39
-Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):12
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #DEGs numbers:51
+Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC > 2)) #length(Up_DEGs):40
+Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):14
+DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #length(DEGS):54
 
 #################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
@@ -817,7 +907,22 @@ DEG_sva<- subset(
 DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 
 #顯著基因(BH校正後)
-Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.01 & logFC > 2)) #length(Up_DEGs):39
-Down_DEGs<-row.names(subset(DEG_sva,P.Value < 0.01 & logFC < -2)) #length(Down_DEGs):12
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.01 & abs(logFC)>2)) #DEGs numbers:51
+Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.01 & logFC > 2)) #length(Up_DEGs):40
+Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.01 & logFC < -2)) #length(Down_DEGs):14
+DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.01 & abs(logFC)>2)) #DEGs numbers:54
 #write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_strictly(Batch Effect Correction).csv',row.names = F)
+
+
+#################{svaseq+ssva校正前後Log2cpm Matrix}#################
+#------{校正前}------
+#write.csv(log2cpm_matrix,file='RNA_DATA/log2cpm_matrix_before_BatchEffectCorrection.csv')
+
+#------{校正後}------
+library(limma)
+log2cpm_corrected <- removeBatchEffect(
+  log2cpm_matrix  ,
+  covariates = sv_result$sv,
+  design     = design
+) #gene:9198 smaples:21
+
+#write.csv(log2cpm_corrected,file='RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv')
