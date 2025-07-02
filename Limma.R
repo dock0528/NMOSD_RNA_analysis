@@ -612,6 +612,7 @@ library(limma)
 library(edgeR)
 #Sample & Group
 sample_df=data.frame(Sample=colnames(count_df))
+
 sample_df$Group <- ifelse(
   grepl("^SRR", sample_df$Sample),  # 如果 Sample 以 "SRR" 開頭
   "Control",                         # 就標成 Control
@@ -920,9 +921,9 @@ DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.01 & abs(logFC)>2)) #DEGs numbers:54
 #------{校正後}------
 library(limma)
 log2cpm_corrected <- removeBatchEffect(
-  log2cpm_matrix  ,
+  log2cpm_matrix ,
   covariates = sv_result$sv,
-  design     = design
+  design     =model.matrix(~ 1, sample_df)  #去除batch影響，包留生物學差異，並帶"截距"包持基因的全局水平不變
 ) #gene:9198 smaples:21
 
 #write.csv(log2cpm_corrected,file='RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv')

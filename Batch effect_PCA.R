@@ -8,7 +8,7 @@ log2cpm_df<-read.csv("./RNA_DATA/log2cpm_matrix_before_BatchEffectCorrection.csv
 mat <- as.matrix(log2cpm_df[ , -1]) #-1 >>> 把第 1 欄拿掉
 
 gene_sample_transpose<-t(mat) #列為sample 欄為gene
-pca_gene_sample<-prcomp(gene_sample_transpose)
+pca_gene_sample<-prcomp(gene_sample_transpose,center=TRUE, scale.=FALSE) #只去除平均，不做zscore
 
 print(pca_gene_sample)
 
@@ -94,7 +94,7 @@ log2cpm_corrected_df<-read.csv("./RNA_DATA/log2cpm_matrix_after_BatchEffectCorre
 mat <- as.matrix(log2cpm_corrected_df[ , -1]) #-1 >>> 把第 1 欄拿掉
 
 gene_sample_transpose<-t(mat) #列為sample 欄為gene
-pca_gene_sample<-prcomp(gene_sample_transpose)
+pca_gene_sample<-prcomp(gene_sample_transpose,center=TRUE, scale.=FALSE)
 
 print(pca_gene_sample)
 
@@ -170,3 +170,285 @@ ggplot(pca.data_2,aes(x=PC1,y=PC2,colour=Group))+
                    legend.key.height = unit(0.6, "cm"),
                    legend.text = element_text(size = 12)
   )
+
+
+#-----------------{DEGs:Batch Effect Correction前後gene expression變化}-----------------
+####{DEGs:ENSG00000117318}####
+DEG_id<-"ENSG00000117318"
+log2cpm_df<-read.csv("./RNA_DATA/log2cpm_matrix_before_BatchEffectCorrection.csv")
+DEG_before_info<-log2cpm_df[log2cpm_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_before_long <- DEG_before_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_before_long$Group <- ifelse(
+  grepl("^SRR", DEG_before_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_before_df<-as.data.frame(DEG_before_long)
+
+#----batch effect correction info
+log2cpm_corrected_df<-read.csv("./RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv")
+DEG_after_info<-log2cpm_corrected_df[log2cpm_corrected_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_after_long <- DEG_after_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM_corrected"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_after_long$Group <- ifelse(
+  grepl("^SRR", DEG_after_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_after_df<-as.data.frame(DEG_after_long)
+
+#----merge 2個df
+DEG_merged_df <- merge(
+  DEG_before_df,
+  DEG_after_df,
+  by     = c("X", "Sample", "Group"),
+)
+DEG_merged_df$Group <- factor(DEG_merged_df$Group , levels = c("NMOSD", "Control")) #加入此>>>設定NMOSD在左邊
+#校正前
+library(ggplot2)
+
+boxplot_log2cpm_before <- ggplot(DEG_merged_df, aes(x = Group, y =log2CPM, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " before correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_before)
+# 校正後
+
+boxplot_log2cpm_after<- ggplot(DEG_merged_df, aes(x = Group, y = log2CPM_corrected, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " after correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_after)
+
+
+#-----------------------------------------------------------------------------------------
+####{DEGs:ENSG00000171793}####
+DEG_id<-"ENSG00000171793"
+log2cpm_df<-read.csv("./RNA_DATA/log2cpm_matrix_before_BatchEffectCorrection.csv")
+DEG_before_info<-log2cpm_df[log2cpm_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_before_long <- DEG_before_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_before_long$Group <- ifelse(
+  grepl("^SRR", DEG_before_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_before_df<-as.data.frame(DEG_before_long)
+
+#----batch effect correction info
+log2cpm_corrected_df<-read.csv("./RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv")
+DEG_after_info<-log2cpm_corrected_df[log2cpm_corrected_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_after_long <- DEG_after_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM_corrected"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_after_long$Group <- ifelse(
+  grepl("^SRR", DEG_after_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_after_df<-as.data.frame(DEG_after_long)
+
+#----merge 2個df
+DEG_merged_df <- merge(
+  DEG_before_df,
+  DEG_after_df,
+  by     = c("X", "Sample", "Group"),
+)
+DEG_merged_df$Group <- factor(DEG_merged_df$Group , levels = c("NMOSD", "Control")) #加入此>>>設定NMOSD在左邊
+#校正前
+library(ggplot2)
+
+boxplot_log2cpm_before <- ggplot(DEG_merged_df, aes(x = Group, y =log2CPM, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " before correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_before)
+# 校正後
+
+boxplot_log2cpm_after<- ggplot(DEG_merged_df, aes(x = Group, y = log2CPM_corrected, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " after correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_after)
+
+#-------------------------------------------------------------------------------------------
+####{DEGs:ENSG00000099985}####
+DEG_id<-"ENSG00000099985"
+log2cpm_df<-read.csv("./RNA_DATA/log2cpm_matrix_before_BatchEffectCorrection.csv")
+DEG_before_info<-log2cpm_df[log2cpm_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_before_long <- DEG_before_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_before_long$Group <- ifelse(
+  grepl("^SRR", DEG_before_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_before_df<-as.data.frame(DEG_before_long)
+
+#----batch effect correction info
+log2cpm_corrected_df<-read.csv("./RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv")
+DEG_after_info<-log2cpm_corrected_df[log2cpm_corrected_df$X==DEG_id,]
+
+#----轉成長df
+library(tidyr)
+library(dplyr) 
+DEG_after_long <- DEG_after_info %>%
+  pivot_longer(
+    cols      = -X,           # 除了 X 之外的所有欄位都 pivot
+    names_to  = "Sample",     # 原本的欄位名稱會變成 Sample 欄位
+    values_to = "log2CPM_corrected"     # 原本的值會集中到 log2CPM 欄位
+  )
+
+DEG_after_long$Group <- ifelse(
+  grepl("^SRR", DEG_after_long$Sample),  # 如果 Sample 以 "SRR" 開頭
+  "Control",                         # 就標成 Control
+  "NMOSD"                            # 否則都當 NMOSD
+)
+DEG_after_df<-as.data.frame(DEG_after_long)
+
+#----merge 2個df
+DEG_merged_df <- merge(
+  DEG_before_df,
+  DEG_after_df,
+  by     = c("X", "Sample", "Group"),
+)
+DEG_merged_df$Group <- factor(DEG_merged_df$Group , levels = c("NMOSD", "Control")) #加入此>>>設定NMOSD在左邊
+#校正前
+library(ggplot2)
+
+boxplot_log2cpm_before <- ggplot(DEG_merged_df, aes(x = Group, y =log2CPM, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " before correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_before)
+# 校正後
+
+boxplot_log2cpm_after<- ggplot(DEG_merged_df, aes(x = Group, y = log2CPM_corrected, fill = Group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  #theme_minimal() +
+  theme_bw()+
+  labs(title =paste0("Expression of ", DEG_id, " after correction") ,
+       x=NULL,y = "log2 CPM",fill="Group") +
+  theme(plot.title = element_text(size = 16, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=11, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+        axis.title.y = element_text(size = 13),
+        legend.background=element_rect(
+          colour='white',fill="white"),
+        legend.key.width = unit(0.8, "cm"),
+        legend.key.height = unit(0.6, "cm"),
+        legend.text = element_text(size = 12))+
+  scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
+
+print(boxplot_log2cpm_after)
+
