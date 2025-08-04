@@ -2,7 +2,7 @@ setwd("C:/Users/JANE/Desktop/Wang實驗室/NMOSD研究計畫/RNA/NMOSD_RNA_analy
 
 ###############################【DEGs:Limma+Vomm】###############################
 #載入套件
-BiocManager::install(c("edgeR","limma"))
+#BiocManager::install(c("edgeR","limma"))
 library(limma)
 library(edgeR)
 
@@ -102,14 +102,15 @@ with(Allgene, plot(
   ylab  = "-log10(P Value)"
 ))
 
-#【Significants genes criteria: adj.P.Val < 0.01 & |logFC|>2】
+
+#----【Significants genes criteria: adj.P.Val < 0.05 & |logFC|>1】-----
 # 下調基因 (藍色)
-with(subset(Allgene, adj.P.Val < 0.01 & logFC < -2),
+with(subset(Allgene, adj.P.Val < 0.05 & logFC < -1),
      points(logFC, -log10(P.Value), pch=20, col='#8FA4FF')
 )
 
 # 上調基因 (紅色)
-with(subset(Allgene, adj.P.Val < 0.01 & logFC >2),
+with(subset(Allgene, adj.P.Val < 0.05 & logFC >1),
      points(logFC, -log10(P.Value), pch=20, col='#FF8080')
 )
 
@@ -128,10 +129,42 @@ legend("topright",
 par(op)
 
 #顯著基因
+Up_DEGs<-row.names(subset(Allgene,adj.P.Val < 0.05 & logFC > 1)) #length(Up_DEGs):2167
+Down_DEGs<-row.names(subset(Allgene,adj.P.Val < 0.05 & logFC < -1)) #length(Down_DEGs):2063
+DEGS<-row.names(subset(Allgene,adj.P.Val<0.05 & abs(logFC)>1)) #DEGs numbers:4230
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_origin(limma).csv',row.names = F)
+write.csv(Up_DEGs,file='RNA_DATA/NMOSD_RNA_DEGS_UP(origin).csv',row.names = F)
+write.csv(Down_DEGs,file='RNA_DATA/NMOSD_RNA_DEGS_DOWN(origin).csv',row.names = F)
+#----【Significants genes criteria: adj.P.Val < 0.01 & |logFC|>2】----
+# 下調基因 (藍色)
+with(subset(Allgene, adj.P.Val < 0.01 & logFC < -2),
+     points(logFC, -log10(P.Value), pch=20, col='#8FA4FF')
+)
+
+# 上調基因 (紅色)
+with(subset(Allgene, adj.P.Val < 0.01 & logFC >2),
+     points(logFC, -log10(P.Value), pch=20, col='#FF8080')
+)
+# 在圖外加圖例，往右外推 20%
+legend("topright",
+       inset   = c(-0.2, 0),
+       legend  = c("Up", "Down"),
+       title   = "Change",
+       pch     = 20,
+       col     = c("#FF8080", "#8FA4FF"),
+       pt.cex  = 1.4, #點符號放大倍數
+       bty     = "n" #the type of box 
+)
+
+# 還原原本的 par 設定
+par(op)
+
+#顯著基因
 Up_DEGs<-row.names(subset(Allgene,adj.P.Val < 0.01 & logFC > 2)) #length(Up_DEGs):732
 Down_DEGs<-row.names(subset(Allgene,adj.P.Val < 0.01 & logFC < -2)) #length(Down_DEGs):735
 DEGS<-row.names(subset(Allgene,adj.P.Val<0.01 & abs(logFC)>2)) #DEGs numbers:1467
-write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(limma).csv',row.names = F)
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(limma).csv',row.names = F)
+
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------
 ###############【Housekeeping Genes(11) Map to Original Gene Matrix】###############
@@ -274,8 +307,17 @@ long_NMOSD_log2cpm$Sample <- fct_relevel(
   after = Inf    #Inf:最尾端
 )
 
-#----畫boxplot distribution in NMOSD patients
-ggplot(long_NMOSD_log2cpm, aes(x = Sample, y = Log2CPM)) +
+#----計算11個 housekeeping gene在10 NMOSD patients的變異度(由小到大排序)
+library(dplyr)
+housekeeping_11genes_variances_sorted <- long_NMOSD_log2cpm %>%
+  group_by(Gene) %>% 
+  summarise(variance = var(Log2CPM, na.rm = TRUE)) %>% #na.rm = TRUE把NA值移除
+  arrange(variance) #由小到大排序
+
+housekeeping_10genes<-housekeeping_11genes_variances_sorted$Gene[1:10]
+control_10genes <- rownames(log2cpm_matrix) %in% housekeeping_10genes
+#----畫11 Housekeeping genes boxplot distribution in NMOSD patients
+ggplot(long_NMOSD_log2cpm, aes(x = Gene, y = Log2CPM)) +
   geom_boxplot(fill = "#EDABC0", outlier.size = 0.5, width = 0.6) +
   theme_bw() +
   theme(
@@ -285,7 +327,7 @@ ggplot(long_NMOSD_log2cpm, aes(x = Sample, y = Log2CPM)) +
   ) +
   labs(
     y     = "log2(CPM)",
-    title = "11 Housekeeping genes log2CPM acorss NMOSD patients"
+    title = "11 Housekeeping genes log2CPM acorss 10 NMOSD patients"
   )
 
 #----Heatmap of wilcox rank sum test between each other
@@ -345,7 +387,7 @@ n.sv <- num.sv(log2cpm_matrix , mod, method = "leek")   #多少個batch effect�
 #----執行 supervised SVA(ssva)
 sv_result <- ssva(  
   log2cpm_matrix,  
-  controls = control_genes,  
+  controls = control_10genes ,  
   n.sv      = n.sv  
 )  
 colnames(sv_result$sv) <- paste0("SV", seq_len(ncol(sv_result$sv))) #加SV欄位名 'SV1' & 'SV2'
@@ -437,6 +479,8 @@ Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs)
 Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.05 & logFC < -1)) #length(Down_DEGs):1451
 DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.05 & abs(logFC)>1)) #length(DEGS):3247
 #write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_11housekeeping_genes(Batch Effect Correction).csv',row.names = F)
+#write.csv(Up_DEGs,file='RNA_DATA/NMOSD_RNA_DEGS_UP(10Control Genes Batch Effect Correction).csv',row.names = F)
+#write.csv(Down_DEGs,file='RNA_DATA/NMOSD_RNA_DEGS_DOWN(10Control Genes Batch Effect Correction).csv',row.names = F)
 #--------------------------------------------------
 
 
@@ -664,7 +708,7 @@ control_genes <- rownames(log2cpm_matrix ) %in% control_genes_ENSG
 library(reshape2)
 library(ggplot2)
 
-log2cpm_control_genes_matrix<-log2cpm_matrix[rownames(log2cpm_matrix) %in% control_genes_ENSG,] #3371control genes(TMM filter low expression genes)
+log2cpm_control_genes_matrix<-log2cpm_matrix[rownames(log2cpm_matrix) %in% control_genes_ENSG,] #3371control genes( filter low expression genes)
 NMOSD_cols <- grepl("Patient", colnames(log2cpm_control_genes_matrix))
 NM0SD_log2cpm_control_genes_matrix<-log2cpm_control_genes_matrix[,NMOSD_cols]
 
@@ -683,6 +727,75 @@ long_NMOSD_log2cpm$Sample <- fct_relevel(
   "Patient10_2T",
   after = Inf    #Inf:最尾端
 )
+
+#----計算每個gene在10 NMOSD patients的變異度(由小到大排序)
+library(dplyr)
+gene_variances_sorted <- long_NMOSD_log2cpm %>%
+  group_by(Gene) %>% 
+  summarise(variance = var(Log2CPM, na.rm = TRUE)) %>% #na.rm = TRUE把NA值移除
+  arrange(variance) #由小到大排序
+
+#----All genes log2CPM
+Allgene_long_NMOSD_log2cpm <- melt(
+  log2cpm_matrix[, NMOSD_cols, drop = FALSE],
+  varnames    = c("Gene", "Sample"),
+  value.name  = "Log2CPM"
+)
+
+#----All genes log2CPM "Variance" sorting
+Allgene_variances_sorted <- Allgene_long_NMOSD_log2cpm  %>%
+  group_by(Gene) %>% 
+  summarise(variance = var(Log2CPM, na.rm = TRUE)) %>% #na.rm = TRUE把NA值移除
+  arrange(variance) #由小到大排
+
+#----All genes 統計資料
+summary(Allgene_variances_sorted$variance)
+
+#----All genes log2cpm boxplot
+ggplot(Allgene_variances_sorted, aes(y = variance)) +
+  geom_boxplot(fill = "#B7E6D6", outlier.size = 0.5, width = 0.6) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(
+      hjust = 0.5,
+      face  = "bold",
+      size  = 14
+    )
+  ) +
+  labs(
+    y     = "Variance",
+    title = "All genes log2CPM Variance distribution"
+  )
+
+#----All genes log2cpm boxplot (var range:0~0.5)
+ggplot(Allgene_variances_sorted, aes(y = variance)) +
+  geom_boxplot(fill = "#BEE6E2", outlier.size = 0.5, width = 0.6) +
+  coord_cartesian(ylim = c(0, 0.5)) +       # 把 y 軸只顯示 0～0.5 區間
+  theme_bw() +
+  theme(
+    plot.title   = element_text(
+      hjust = 0.5,
+      face  = "bold",
+      size  = 14
+    )
+  ) +
+  labs(
+    y     = "Variance",
+    title = "All genes log2CPM Variance distribution (0~0.5)"
+  )
+
+#----小於第1四分位數的Control genes(1285個)
+q1 <- quantile(Allgene_variances_sorted$variance,
+               probs = 0.25,
+               na.rm = TRUE)
+gene_variances_sorted [gene_variances_sorted$variance<q1,] #1285 control genes
+q1_housekeeping_genes<-gene_variances_sorted [gene_variances_sorted$variance<q1,] $Gene #1285 control genes
+q1_control_genes <- rownames(log2cpm_matrix) %in% q1_housekeeping_genes
+#----小於中位數的Control genes(2268個)
+gene_variances_sorted [gene_variances_sorted$variance<median(Allgene_variances_sorted$variance),] #2268 control genes
+medium_housekeeping_genes<-gene_variances_sorted [gene_variances_sorted$variance<median(Allgene_variances_sorted$variance),] $Gene #2268 control genes
+medium_control_genes <- rownames(log2cpm_matrix) %in% medium_housekeeping_genes
+
 
 #----畫boxplot distribution in NMOSD patients
 ggplot(long_NMOSD_log2cpm, aes(x = Sample, y = Log2CPM)) +
@@ -754,7 +867,7 @@ n.sv <- num.sv(log2cpm_matrix , mod, method = "leek")   #多少個batch effect�
 #----執行 supervised SVA(ssva)
 sv_result <- ssva(  
   log2cpm_matrix,  
-  controls = control_genes,  
+  controls =control_genes ,  
   n.sv      = n.sv  
 )  
 colnames(sv_result$sv) <- paste0("SV", seq_len(ncol(sv_result$sv))) #加SV欄位名 'SV1' & 'SV2'
@@ -829,7 +942,7 @@ par(op)
 #顯著基因
 Up_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC > 1)) #length(Up_DEGs):197
 Down_DEGs<-row.names(subset(Allgene_sva,P.Value < 0.05 & logFC < -1)) #length(Down_DEGs):111
-DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #DEGs numbers:308
+DEGS<-row.names(subset(Allgene_sva,P.Value<0.05 & abs(logFC)>1)) #length(DEGS):308
 
 #################{DEGs進行'BH'校正}#################
 #----原始pvalue進行BH校正確保為DEGs
@@ -845,7 +958,7 @@ DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.05 & logFC > 1)) #length(Up_DEGs):202
 Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.05 & logFC < -1)) #length(Down_DEGs):112
 DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.05 & abs(logFC)>1)) # length(DEGS):314
-#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(Batch Effect Correction).csv',row.names = F)
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS(2268Control Genes Batch Effect Correction).csv',row.names = F)
 #--------------------------------------------------
 
 
@@ -910,8 +1023,8 @@ DEG_sva$adj.P.Val <- p.adjust(DEG_sva$P.Value, method="BH")
 #顯著基因(BH校正後)
 Up_DEGs<-row.names(subset(DEG_sva,adj.P.Val< 0.01 & logFC > 2)) #length(Up_DEGs):40
 Down_DEGs<-row.names(subset(DEG_sva,adj.P.Val < 0.01 & logFC < -2)) #length(Down_DEGs):14
-DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.01 & abs(logFC)>2)) #DEGs numbers:54
-#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_strictly(Batch Effect Correction).csv',row.names = F)
+DEGS<-row.names(subset(DEG_sva,adj.P.Val<0.01 & abs(logFC)>2)) #length(DEGS):54
+#write.csv(DEGS,file='RNA_DATA/NMOSD_RNA_DEGS_strictly(2268Control Genes Batch Effect Correction).csv',row.names = F)
 
 
 #################{svaseq+ssva校正前後Log2cpm Matrix}#################
@@ -926,4 +1039,4 @@ log2cpm_corrected <- removeBatchEffect(
   design     =model.matrix(~ 1, sample_df)  #去除batch影響，包留生物學差異，並帶"截距"包持基因的全局水平不變
 ) #gene:9198 smaples:21
 
-#write.csv(log2cpm_corrected,file='RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection.csv')
+#write.csv(log2cpm_corrected,file='RNA_DATA/log2cpm_matrix_after_BatchEffectCorrection(10Control Genes).csv')
