@@ -170,6 +170,38 @@ hallmark_interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,hallmark_interferons$
 print(hallmark_interferon_in_DEGs)
 #write.csv(hallmark_interferon_in_DEGs,file= "./RNA_DATA/Hallmark_IFN_DEG_genes(origin data).csv",row.names = FALSE)
 
+#---------{Origin protein coding-DEGs (criteria: padjust<0.05 & |log2FC|>1}---------
+
+#---{Interferon count}
+DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_origin(protein codin genes).csv',header=T)
+DEG_genes<-DEGs_df$x
+DEG_genes_df<-bitr(DEG_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
+type_I_interferons<-read.csv('RNA_DATA/Type I Interferon gene list(MsigDB).csv',header=T) #Type I Interferon gene list:7935個
+interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,type_I_interferons$Type.I.Interferon.genes)
+hallmark_interferons<-read.csv('RNA_DATA/Interferon_hallmark.csv',header=T) #Hallmark Interferon gene list:97個
+hallmark_interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,hallmark_interferons$HALLMARK_INTERFERON_ALPHA_RESPONSE)
+interferon_df<-data.frame(Type.I.IFN=length(interferon_in_DEGs),Hallmark.IFN=length(hallmark_interferon_in_DEGs))
+print(interferon_df)
+
+#---{type.I.IFN.list}
+DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_origin(protein codin genes).csv',header=T)
+DEG_genes<-DEGs_df$x
+DEG_genes_df<-bitr(DEG_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
+type_I_interferons<-read.csv('RNA_DATA/Type I Interferon gene list(MsigDB).csv',header=T) #Type I Interferon gene list:7935個
+interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,type_I_interferons$Type.I.Interferon.genes)
+print(interferon_in_DEGs) 
+#write.csv(interferon_in_DEGs,file = "./RNA_DATA/Type_I_IFN_DEG_genes(origin data)(protein codin genes).csv",row.names = FALSE)
+
+#---{hallmark.IFN.list}
+DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_origin(protein codin genes).csv',header=T)
+DEG_genes<-DEGs_df$x
+DEG_genes_df<-bitr(DEG_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
+hallmark_interferons<-read.csv('RNA_DATA/Interferon_hallmark.csv',header=T) #Hallmark Interferon gene list:97個
+hallmark_interferon_in_DEGs<-intersect(DEG_genes_df$SYMBOL,hallmark_interferons$HALLMARK_INTERFERON_ALPHA_RESPONSE) #和DEGs交集有0
+print(hallmark_interferon_in_DEGs)
+#write.csv(hallmark_interferon_in_DEGs,file= "./RNA_DATA/Hallmark_IFN_DEG_genes(origin data)(protein codin genes).csv",row.names = FALSE)
+
+
 #---------{Housekeeping genes (criteria: padjust<0.05 & |log2FC|>1}---------
 interferon_count<-function(number){
   path<-paste0('RNA_DATA/NMOSD_RNA_DEGS(',number,'Control Genes Batch Effect Correction).csv')
@@ -839,37 +871,16 @@ interferon_with_reference<-intersect(unique_type_I_IFN_genes,reference_interfero
 View(typeI_IFN_df)
 
 
-#-------------------------------------------------------------------------------------------------------------------------------
-
-reference_interferon_genes <- c(
-  "IL1RN", "IFIT5", "IFIT3", "IFIT2", "IFI6", "HERC5",
-  "CMPK2", "IFIT1", "MX1", "ISG15", "OASL", "RSAD2",
-  "IFI44L", "OAS3", "IFI44", "XAF1", "EIF2AK2", "LAP3",
-  "LY6E", "OAS2", "OAS1", "USP18", "HERC6", "SIGLEC1",
-  "IFI27") #原始3個csv交集出共同的Type I Interferon
-interferon_with_reference<-intersect(interferon_in_DEGs,reference_interferon_genes)
-hallmark_interferon_with_reference<-intersect(hallmark_interferon_in_DEGs,reference_interferon_genes)
-
-
-#----Refernce:Other_therapy vs healthy DEGs
-reference_other_therapy_IFNs<-read.csv('RNA_DATA/Other_therapy_healthy_DEGs_v2.csv',header=T)
-interferon_in_other_therapy<-intersect(reference_other_therapy_IFNs$Gene,type_I_interferons$Type.I.Interferon.genes)#62
-interferon_with_other_therapy<-intersect(interferon_in_DEGs,interferon_in_other_therapy)#無交集
-
-#----Refernce:Other_therapy vs healthy DEGs
-reference_untreat_IFNs<-read.csv('RNA_DATA/Untreat_healthy_DEGs_v2.csv',header=T)
-interferon_in_untreat<-intersect(reference_untreat_IFNs$Gene,type_I_interferons$Type.I.Interferon.genes)#51
-interferon_with_untreat<-intersect(interferon_in_DEGs,interferon_in_untreat)#無交集
-
+######################################【ORA】######################################
 
 #-----------{Strictly DEGs}----------------
-strict_DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_strictly(11Control Genes Batch Effect Correction).csv',header=T)
+strict_DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_strictly_origin(limma).csv',header=T)
 strict_DEGs_genes<-strict_DEGs_df$x
 strict_DEGs_genes_df<-bitr(strict_DEGs_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
 
 
 #-----------{DEGs}----------------
-DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS(11Control Genes Batch Effect Correction).csv',header=T)
+DEGs_df<-read.csv('RNA_DATA/NMOSD_RNA_DEGS_origin(protein codin genes).csv',header=T)
 DEGs_genes<-DEGs_df$x
 DEGs_genes_df<-bitr(DEGs_genes,fromType = 'ENSEMBL',toType=c('ENTREZID','SYMBOL'),OrgDb='org.Hs.eg.db')
 
@@ -913,7 +924,7 @@ ego_BP<-enrichGO(gene=DEGs_genes,
 ego_BP_df<-ego_BP@result
 View(ego_BP_df)
 significant_BP_result<-ego_BP@result[ego_BP@result$p.adjust<0.01,]
-nrow(significant_BP_result)#253
+nrow(significant_BP_result)#441
 View(significant_BP_result)
 
 #---【與 type I interferon 有關的 pathway】
@@ -922,7 +933,7 @@ typeI_IFN <- grepl("type I interferon|interferon-alpha|interferon-beta", signifi
 # 建立新的資料框
 typeI_IFN_df <- significant_BP_result[typeI_IFN, ]
 View(typeI_IFN_df)
-nrow(typeI_IFN_df)#1
+nrow(typeI_IFN_df)#5
 
 #dotplot
 dotplot(ego_BP,title='EnrichmentGO_BP',label_format = 100,showCategory = 30)
@@ -939,12 +950,13 @@ ego_BP<-enrichGO(gene=strict_DEGs_genes,
                  keyType = 'ENSEMBL',
                  ont='BP', #也可以是CC、BP
                  pAdjustMethod = 'BH', #Benjamini-Hochberg
-                 pvalueCutoff = 0.05, #adjusted pvalue cutoff #1為不過濾
+                 pvalueCutoff = 0.01, #adjusted pvalue cutoff #1為不過濾
                  readable = T) #將Gene ID轉成gene Symbol(易讀)
 ego_BP_df<-ego_BP@result
 View(ego_BP_df)
-significant_BP_result<-ego_BP@result[ego_BP@result$p.adjust<0.05,]
-View(significant_BP_result) #537
+significant_BP_result<-ego_BP@result[ego_BP@result$p.adjust<0.01,]
+nrow(significant_BP_result)#81
+View(significant_BP_result) 
 
 #---【與 type I interferon 有關的 pathway】
 typeI_IFN <- grepl("type I interferon|interferon-alpha|interferon-beta", significant_BP_result$Description, ignore.case = TRUE)
@@ -952,9 +964,10 @@ typeI_IFN <- grepl("type I interferon|interferon-alpha|interferon-beta", signifi
 # 建立新的資料框
 typeI_IFN_df <- significant_BP_result[typeI_IFN, ]
 View(typeI_IFN_df)
+nrow(typeI_IFN_df)#0
 
 #dotplot
-dotplot(ego_BP,title='EnrichmentGO_BP',label_format = 100,showCategory = 50)
+dotplot(ego_BP,title='EnrichmentGO_BP',label_format = 100,showCategory = 30)
 #label_format讓文字不會重疊
 
 #barplot
@@ -962,17 +975,18 @@ barplot(ego_BP,showCategory=20,title='EnrichmentGO_BP_bar',label_format = 100)
 #showCategory=20繪製前20個
 
 #--------------【KEGG pathway富集分析】------------------
+#----{DEGs}
 kk<-enrichKEGG(gene=DEGs_genes_df$ENTREZID,#你的基因列表
                organism='hsa', #指定物種 #hsa人類
                pvalueCutoff = 0.01 #1不進行過濾
               )
 
 View(kk@result)
-nrow(kk@result[kk@result$p.adjust<0.01,])#38
+nrow(kk@result[kk@result$p.adjust<0.01,])#65
 View(kk@result[kk@result$p.adjust<0.01,]) 
 
 #KEGG dotplot
-dotplot(kk,title='Enrichment KEGG',font.size = 14,label_format = 100,showCategory = 30)
+dotplot(kk,title='Enrichment KEGG',font.size = 12,label_format = 100,showCategory = 30)
 
 ###(特定)KEGG pahtway
 genelist<-as.numeric(res[1:4289,'log2FoldChange']) #DEGs_gene有4289個
@@ -985,6 +999,31 @@ pathview(gene.data = genelist,
          kegg.native = T, #是否使用KEGG原生圖像
          new.sigmature=F, #是否生成新的標誌(T=>生成新的標誌以顯示顯著變化的基因)
          limit=list(gene=2.5,cpd=1))#基因表達的限制是 2.5，對化合物的限制是 1
+#----{strictly DEGs}
+kk<-enrichKEGG(gene=strict_DEGs_genes_df$ENTREZID,#你的基因列表
+               organism='hsa', #指定物種 #hsa人類
+               pvalueCutoff = 0.01 #1不進行過濾
+)
+
+View(kk@result)
+nrow(kk@result[kk@result$p.adjust<0.01,])#22
+View(kk@result[kk@result$p.adjust<0.05,]) 
+
+#KEGG dotplot
+dotplot(kk,title='Enrichment KEGG',font.size = 12,label_format = 100,showCategory = 22)
+
+###(特定)KEGG pahtway
+genelist<-as.numeric(res[1:4289,'log2FoldChange']) #DEGs_gene有4289個
+names(genelist)<-DEG_genes_df[1:4289,'ENTREZID'] #pathview默認是entrez id
+select_pathway<-kk@result$ID[1] #hsa04610
+
+pathview(gene.data = genelist,
+         pathway.id = select_pathway,
+         species='hsa',
+         kegg.native = T, #是否使用KEGG原生圖像
+         new.sigmature=F, #是否生成新的標誌(T=>生成新的標誌以顯示顯著變化的基因)
+         limit=list(gene=2.5,cpd=1))#基因表達的限制是 2.5，對化合物的限制是 1
+
 
 ##############【Type I IFN genes pathway analysis】#################
 IFN_related_genes_list<-read.csv("./RNA_DATA/Type I Interferon gene list(MsigDB).csv")
