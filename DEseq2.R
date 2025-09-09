@@ -1,4 +1,4 @@
-setwd("C:/Users/JANE/Desktop/Wang實驗室/NMOSD研究計畫/RNA/NMOSD_RNA_analysis")
+
 #BiocManager::install('DESeq2')
 library(DESeq2)
 library(edgeR)
