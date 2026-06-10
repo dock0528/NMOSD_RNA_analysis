@@ -24,7 +24,7 @@ class(external_protein.codong.tpm_df) #"data.frame"
 
 
 
-################【8 Intersection DEGs list (adjust.p<0.05 & |log2FC|<1)】#################
+################【7 Intersection IFN-I DEGs list (adjust.p<0.05 & |log2FC|<1)】#################
 #----{8 Intersection protein coding-DEGs  list}
 my_external_protein.coding.DEGs <- c(
   "ENSG00000187608",
@@ -33,7 +33,6 @@ my_external_protein.coding.DEGs <- c(
   "ENSG00000131016",
   "ENSG00000160932",
   "ENSG00000135114",
-  "ENSG00000167483",
   "ENSG00000159958"
 )
 library(clusterProfiler)
@@ -71,14 +70,13 @@ complete_clusters_euclidean_row<-hclust(euclidean_dist_row,method='ward.D')
 mat_z <- t(scale(t(my_protein.codong.DEG.tpm_matrix))) #對gene做z-score
 nmosd_idx    <- which(sample_df$Group == "NMOSD")
 control_idx  <- which(sample_df$Group == "Control")
-score <- rowMeans(mat_z[, nmosd_idx,   drop = FALSE]) -
-  rowMeans(mat_z[, control_idx, drop = FALSE]) #Each gene mean(NMOSD)-mean(Control)
+score <- rowMeans(mat_z[, nmosd_idx,   drop = FALSE]) -rowMeans(mat_z[, control_idx, drop = FALSE]) #Each gene mean(NMOSD)-mean(Control)
+#order_genes <- rownames(mat_z)[order(score, decreasing = TRUE)] #Order gene 大->小
 
-order_genes <- rownames(mat_z)[order(score, decreasing = TRUE)] #Order gene 大->小
+order_genes<-c('LY6E','IFI6','ISG15','OASL','CMPK2','TNFRSF13C','AKAP12') #Order gene 大->小
 cluster_dend_rows_order <- as.hclust(rotate(as.dendrogram(complete_clusters_euclidean_row), order = order_genes))
 #as.hclust 樹狀結構
 #as.dendrogram 樹的物件(透過它才可以做排序轉換)
-
 
 #----{pheatmap}設定畫布1000*1200
 pheatmap(
@@ -154,10 +152,10 @@ complete_clusters_euclidean_row<-hclust(euclidean_dist_row,method='ward.D')
 #nmosd_idx    <- which(sample_df$Group == "NMOSD")
 #control_idx  <- which(sample_df$Group == "Control")
 #score <- rowMeans(mat_z[, nmosd_idx,   drop = FALSE]) -
-  rowMeans(mat_z[, control_idx, drop = FALSE]) #Each gene mean(NMOSD)-mean(Control)
+#rowMeans(mat_z[, control_idx, drop = FALSE]) #Each gene mean(NMOSD)-mean(Control)
 
 #order_genes <- rownames(mat_z)[order(score, decreasing = TRUE)] #Order gene 大->小
-order_genes<-c('LY6E','IFI6','ISG15','OASL','CMPK2','NIBAN3','TNFRSF13C','AKAP12') #順序同my data
+order_genes<-c('LY6E','IFI6','ISG15','OASL','CMPK2','TNFRSF13C','AKAP12') #順序同my data
 cluster_dend_rows_order <- as.hclust(rotate(as.dendrogram(complete_clusters_euclidean_row), order = order_genes))
 #as.hclust 樹狀結構
 #as.dendrogram 樹的物件(透過它才可以做排序轉換)
