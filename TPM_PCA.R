@@ -1052,3 +1052,138 @@ My_boxplot_TPM <- ggplot(DEG_df, aes(x = Group, y =TPM, fill = Group)) +
   scale_fill_manual(values = c("NMOSD" = "#E3A19F", "Control" = "#67D6F0"))
 
 print(My_boxplot_TPM)
+#--------【Discovery 和 Independent 一起畫PCA】---------------
+library(dplyr)
+library(tibble)
+library(ggplot2)
+
+my_tpm_df <- read.csv(
+  "./RNA_DATA/My_TPM_gene_samples_matrix(intersection gene).csv",
+  check.names = FALSE
+)
+
+external_tpm_df <- read.csv(
+  "./RNA_DATA/External_TPM_gene_samples_matrix(intersection gene).csv",
+  check.names = FALSE
+)
+
+# =========================
+# Keep protein-coding genes
+# =========================
+my_protein_coding_tpm_df <- my_tpm_df %>%
+  filter(gene_id %in% inter_protein_coding_genes$x) %>%
+  distinct(gene_id, .keep_all = TRUE)
+
+external_protein_coding_tpm_df <- external_tpm_df %>%
+  filter(gene_id %in% inter_protein_coding_genes$x) %>%
+  distinct(gene_id, .keep_all = TRUE)
+
+# =========================
+# Rename sample columns to avoid duplicated names
+# =========================
+colnames(my_protein_coding_tpm_df)[-1] <- paste0(
+  "My_",
+  colnames(my_protein_coding_tpm_df)[-1]
+)
+
+colnames(external_protein_coding_tpm_df)[-1] <- paste0(
+  "External_",
+  colnames(external_protein_coding_tpm_df)[-1]
+)
+
+# =========================
+# Merge by gene_id
+# =========================
+merged_tpm_df <- inner_join(
+  my_protein_coding_tpm_df,
+  external_protein_coding_tpm_df,
+  by = "gene_id"
+)
+merged_tpm_df <- merged_tpm_df %>%
+  select(
+    -matches("^External_(Ritux|other|Rtux)")
+  )
+dim(merged_tpm_df)
+all_gene_sample <- as.matrix(merged_tpm_df[, -1]) # gene x sample
+
+rownames(all_gene_sample) <-merged_tpm_df$gene_id  # 設定欄名為基因 ID
+
+gene_sample_transpose <- t(all_gene_sample)  # 列為 sample，欄為 gene
+
+
+# =========================
+# PCA
+# =========================
+pca_gene_sample <- prcomp(gene_sample_transpose)
+print(pca_gene_sample)
+
+
+pca_gene_sample$rotation #權重
+pc1_weight<-pca_gene_sample$rotation[,1]#pc1的權重
+pc2_weight<-pca_gene_sample$rotation[,2]#pc2的權重
+
+#原先數值x權重
+#找pc1新的值
+pc1<-list()
+for(i in 1:ncol(all_gene_sample)){
+  sample_pc1<-0
+  for(x in 1:length(pc1_weight)){
+    sample_pc1<-sample_pc1+(all_gene_sample[x,i]*pc1_weight[x])
+  }
+  pc1<-append(pc1,sample_pc1)
+}
+
+pc1_after<-as.numeric(unlist(pc1))#as.numeric()轉成數值向量類型
+
+#找pc2新的值
+pc2<-list()
+for(i in 1:ncol(all_gene_sample)){
+  sample_pc2<-0
+  for(x in 1:length(pc2_weight)){
+    sample_pc2<-sample_pc2+(all_gene_sample[x,i]*pc2_weight[x])
+  }
+  pc2<-append(pc2,sample_pc2)
+}
+
+pc2_after<-as.numeric(unlist(pc2))
+
+pca.var<-pca_gene_sample$sdev^2
+pca.var.percentage<-round(pca.var/sum(pca.var)*100,1)
+barplot(pca.var.percentage,main='Scree plot',xlab='Principle Component',
+        ylab='Percent Variation')
+
+pca.data_2<-data.frame(Sample=rownames(gene_sample_transpose),PC1=(pc1_after),PC2=(pc2_after))
+pca.data_2
+
+pca.data_2 <- pca.data_2 %>%
+  mutate(
+    Group = case_when(
+      grepl("^My_Patient", Sample) ~ "My_NMOSD",
+      grepl("^My_SRR", Sample) ~ "My_Control",
+      grepl("^External_no(\\.|$)", Sample) ~ "External_NMOSD",
+      grepl("^External_NA(\\.|$)", Sample) ~ "External_Control",
+      TRUE ~ "Unknown"
+    )
+  )
+
+table(pca.data_2$Group)
+
+pca_var <- summary(pca_gene_sample)$importance[2, ] * 100
+
+ggplot(pca.data_2, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  labs(
+    title = "PCA of discovery and independent cohort",
+    x = paste0("PC1 (", round(pca.var.percentage[1], 2), "%)"),
+    y = paste0("PC2 (", round(pca.var.percentage[2], 2), "%)"),
+    color = "Group"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11)
+  )
+

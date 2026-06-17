@@ -66,13 +66,14 @@ cell_type_df<-immunedeconv::deconvolute(expr_tpm_symbol, "quantiseq")
 #write.csv(discovery_Bcells_comp,
 #          file = "./RNA_DATA/discovery_Bcells_comp.csv",
 #          row.names = FALSE)
+discovery_Bcells_comp<-read.csv("./RNA_DATA/discovery_Bcells_comp.csv")
 
 independent_Bcells_comp<-cell_type_df[cell_type_df$cell_type=='B cell',]
 independent_Bcells_comp
 write.csv(independent_Bcells_comp,
   file = "./RNA_DATA/independent_Bcells_comp.csv",
   row.names = FALSE)
-
+independent_Bcells_comp<-read.csv("./RNA_DATA/independent_Bcells_comp.csv")
 
 #----【scRNA B cell types比例】----
 celltype_metadata <- read.csv("C:/Users/Jane/Desktop/Wang實驗室/NMOSD研究計畫/scRNA/scRNA_DATA/My_merged_protein_coding_genes/My_merged_Azimuth_sub_celltype_CellChat.csv")
@@ -105,10 +106,13 @@ scRNA_B_comp<-B_fraction_wide
 write.csv(scRNA_B_comp,
           file = "./RNA_DATA/scRNA_Bcells_comp.csv",
           row.names = FALSE)
+scRNA_B_comp<-read.csv("./RNA_DATA/scRNA_Bcells_comp.csv")
 
 #----【Bulk 和 scRNA作統計檢定】----
 
 #合併discovery & independent B-cell composition
+library(dplyr)
+library(tidyr)
 bulk_B_comp <- full_join(
   discovery_Bcells_comp,
   independent_Bcells_comp,
@@ -142,30 +146,39 @@ B_compare_Pvalue<-wilcox.test(B_fraction ~ source, data = B_compare)$p.value #un
 print(B_compare_Pvalue)
 
 #畫boxplot
+library(ggplot2)
 boxplot_Bcell <- ggplot(B_compare, aes(x = source, y =B_fraction, fill =  source)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
-  geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
+  stat_boxplot(
+    geom = "errorbar",
+    width = 0.25
+  )+ #上下鬚加橫線
+  geom_boxplot(width = 0.5, #控制box寬度
+               fatten = 1,          # median 線不要太粗
+               outlier.shape = 1,   # 空心圓
+               outlier.size = 2,
+               outlier.stroke = 0.9, alpha = 1) +  #outlier.stroke空心圓框粗度
+  #geom_jitter(width = 0.2, alpha = 0.7) +  # 添加點狀數據
   #theme_minimal() +
   theme_bw()+
   labs(title =" B cell composition between bulk and scRNA" ,
        x=NULL,y = "B_fraction",fill="source") +
-  theme(plot.title = element_text(size = 15, hjust = 0.5,face='bold'),
-        axis.text.x = element_text(size=13, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
+  theme(plot.title = element_text(size = 13, hjust = 0.5,face='bold'),
+        axis.text.x = element_text(size=12, angle=0,hjust = 0.5,vjust =1), #hjust=0.5置中對齊
         axis.title.y = element_text(size = 13),
         legend.background=element_rect(
           colour='white',fill="white"),
         legend.key.width = unit(0.8, "cm"),
         legend.key.height = unit(0.6, "cm"),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 14))+
-  annotate(
-    "text",
-    x = 1.5,
-    y = max(B_compare$B_fraction, na.rm = TRUE) * 1.1,
-    label = paste0("Padj = ",signif(B_compare_Pvalue, 3)),
-    size = 4
-  ) +
-  scale_fill_manual(values = c("bulk" = "#DAC9EE", "scRNA" = "#A8F6BB"))
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))+
+  #annotate(
+  #  "text",
+  #  x = 1.5,
+  #  y = max(B_compare$B_fraction, na.rm = TRUE) * 1.1,
+  # label = paste0("P = ",signif(B_compare_Pvalue, 3)),
+  #  size = 4
+  #) +
+  scale_fill_manual(values = c("bulk" = "#DAC9EE", "scRNA" = "#ABF7D9"))
 
 print(boxplot_Bcell)
 
