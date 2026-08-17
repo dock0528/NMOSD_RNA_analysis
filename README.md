@@ -42,7 +42,7 @@ The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are 
 
 | Step | Description | Corresponding code |
 |---|---|---|
-| Bulk RNA-seq input | The main cohort contains 10 NMOSD and 11 healthy control samples. An independent cohort contains 5 NMOSD and 18 healthy controls. | `RNA_DATA/` |
+| Bulk RNA-seq input | The main cohort contains 10 NMOSD and 11 healthy control samples. An independent cohort contains 5 NMOSD and 18 healthy controls. | Not applicable |
 | FASTQ quality control | Quality assessment of the FASTQ files. | FastQC and MultiQC (upstream tools; no script provided) |
 | Adapter trimming | Removal of sequencing adapters. | Cutadapt and Trimmomatic (upstream tools; no script provided) |
 | Mapping to the reference genome | Alignment to GRCh38. | STAR (upstream tool; no script provided) |
