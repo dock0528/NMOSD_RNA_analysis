@@ -48,5 +48,7 @@ The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are 
 | Differential expression analysis | Compare NMOSD and healthy control samples in the main and independent cohorts using Limma-voom, edgeR, and DESeq2. | `R/Limma.R`, `R/edgeR.R`, `R/DEseq2.R`, `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
 | Type I interferon-related gene set | Compare DEGs with Type I interferon and hallmark interferon gene sets. | `python/inteferon_geneset.ipynb` |
 | Significant Type I interferon-related genes | Integrate DEG results and classify shared up- and down-regulated genes. | `R/DEGs_analysis(3 packages).R`, `python/DEG_up_down.ipynb` |
-
-Additional analysis files include PCA and batch-effect assessment (`R/log2cpm_PCA.R`, `R/TPM_PCA.R`, `R/Batch effect_PCA.R`), hierarchical clustering (`R/hirarchical_clustering.R`), cell-type deconvolution (`R/deconvolution_cell_type_bulk.R`), and functional enrichment analysis (`R/Pathway.R`).
+| PCA and batch-effect assessment | Evaluate sample structure and compare data before and after batch-effect correction. | `R/log2cpm_PCA.R`, `R/TPM_PCA.R`, `R/Batch effect_PCA.R` |
+| Hierarchical clustering | Visualize expression patterns of selected genes across samples. | `R/hirarchical_clustering.R` |
+| Cell-type deconvolution | Estimate cell-type composition from bulk RNA-seq expression data. | `R/deconvolution_cell_type_bulk.R` |
+| Functional enrichment analysis | Perform functional enrichment analysis for selected gene sets. | `R/Pathway.R` |
