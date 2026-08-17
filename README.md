@@ -4,7 +4,7 @@ This repository contains the source code and analysis files for bulk RNA-seq ana
 
 ## Dataset
 
-The repository contains processed RNA-seq matrices, intermediate files, and analysis results in `RNA_DATA/`. Original sample-level data involve privacy-sensitive information and are not publicly available.
+The datasets used in this study involve privacy-sensitive information and are therefore not publicly available.
 
 ## Software Versions
 
