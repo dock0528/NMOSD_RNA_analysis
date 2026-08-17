@@ -41,9 +41,9 @@ The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are 
 | Step | Description | Corresponding code |
 |---|---|---|
 | Bulk RNA-seq input | The main cohort contains 10 NMOSD and 11 healthy control samples. An independent cohort contains 5 NMOSD and 18 healthy controls. |  |
-| FASTQ quality control | Quality assessment of the FASTQ files. | FastQC and MultiQC (upstream tools; no script provided) |
-| Adapter trimming | Removal of sequencing adapters. | Cutadapt and Trimmomatic (upstream tools; no script provided) |
-| Mapping to the reference genome | Alignment to GRCh38. | STAR (upstream tool; no script provided) |
+| FASTQ quality control | Quality assessment of the FASTQ files. |  |
+| Adapter trimming | Removal of sequencing adapters. |  |
+| Mapping to the reference genome | Alignment to GRCh38. |  |
 | Transcript identification and gene expression | Use RSEM and STAR results to construct expression matrices and calculate FPKM/TPM values. | `python/FPKM_TPM.ipynb`, `python/TPM_my_with_external_data.ipynb`, `python/No_3_genes_TPM_my_with_external_data.ipynb`, `python/rna_file.ipynb` |
 | Independent cohort | Process the independent cohort for comparison with the main cohort. | `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
 | Differential expression analysis | Identify NMOSD-associated genes using Limma-voom, edgeR, and DESeq2. | `R/Limma.R`, `R/edgeR.R`, `R/DEseq2.R`, `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
