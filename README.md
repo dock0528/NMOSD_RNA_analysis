@@ -8,7 +8,7 @@ The repository contains processed RNA-seq matrices, intermediate files, and anal
 
 ## Software Versions
 
-The repository uses R scripts and Python/Jupyter notebooks. Specific software, package, operating-system, editor, and server versions are not recorded in the repository.
+The repository uses R scripts and PYTHON notebooks. Specific software, package, operating-system, editor, and server versions are not recorded in the repository.
 
 ## Analysis Workflow
 
@@ -32,22 +32,24 @@ flowchart TD
 
     classDef normal fill:#ffffff,stroke:#555555,stroke-width:1px,color:#111111,font-weight:normal;
     class A,B,C,D,E,F,G,H,I,J normal;
+    style A width:220px,height:80px;
+    style B width:220px,height:80px;
 ```
 
 The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are represented in the workflow for completeness. The repository mainly contains the processed RSEM and STAR results used by the downstream analyses.
 
 ## Analysis Pipeline and Source Code
 
-| Step | Description | Source code |
+| Step | Description | Corresponding code |
 |---|---|---|
-| Upstream bulk RNA-seq processing | FASTQ quality control, adapter trimming, reference mapping, and transcript quantification. These upstream steps are not included as executable scripts in this repository. | FastQC, MultiQC, Cutadapt/Trimmomatic, STAR, and RSEM |
-| Expression matrix construction | Read RSEM and STAR results and construct gene-by-sample matrices. | `FPKM_TPM.ipynb`, `TPM_my_with_external_data.ipynb`, `No_3_genes_TPM_my_with_external_data.ipynb`, `rna_file.ipynb` |
-| FPKM and TPM quantification | Calculate FPKM and TPM values and combine samples into expression matrices. | `FPKM_TPM.ipynb`, `TPM_my_with_external_data.ipynb` |
-| Expression transformation and PCA | Transform expression values, generate log2-CPM/TPM matrices, and assess sample structure using PCA. | `log2cpm_PCA.R`, `TPM_PCA.R`, `pc1_elbow_method.ipynb`, `TPM_my_with_external_data.ipynb` |
-| Batch-effect assessment and correction | Compare PCA results before and after batch-effect correction. | `Batch effect_PCA.R`, `log2cpm_PCA.R` |
-| Differential expression analysis | Identify NMOSD-associated genes using Limma-voom, edgeR, and DESeq2 for the study and external datasets. | `Limma.R`, `edgeR.R`, `DEseq2.R`, `Limma_external.R`, `edgeR_external.R`, `DEseq2_external.R` |
-| DEG integration | Compare DEG lists, classify up- and down-regulated genes, and identify intersections across analyses. | `DEGs_analysis(3 packages).R`, `DEG_up_down.ipynb` |
-| Type I interferon gene-set analysis | Compare DEGs with Type I interferon and hallmark interferon gene sets. | `inteferon_geneset.ipynb`, the differential-expression scripts above |
-| Hierarchical clustering and heatmaps | Visualize expression patterns of selected DEGs across samples. | `hirarchical_clustering.R` |
-| Cell-type deconvolution | Estimate bulk RNA-seq cell-type composition. | `deconvolution_cell_type_bulk.R` |
-| Functional enrichment analysis | Perform GO and KEGG enrichment analysis for selected gene sets. | `Pathway.R`, `DEGs_analysis(3 packages).R`, `log2cpm_PCA.R` |
+| Bulk RNA-seq input | The main cohort contains 10 NMOSD and 11 healthy control samples. An independent cohort contains 5 NMOSD and 18 healthy controls. | `RNA_DATA/` |
+| FASTQ quality control | Quality assessment of the FASTQ files. | FastQC and MultiQC (upstream tools; no script provided) |
+| Adapter trimming | Removal of sequencing adapters. | Cutadapt and Trimmomatic (upstream tools; no script provided) |
+| Mapping to the reference genome | Alignment to GRCh38. | STAR (upstream tool; no script provided) |
+| Transcript identification and gene expression | Use RSEM and STAR results to construct expression matrices and calculate FPKM/TPM values. | `PYTHON/FPKM_TPM.ipynb`, `PYTHON/TPM_my_with_external_data.ipynb`, `PYTHON/No_3_genes_TPM_my_with_external_data.ipynb`, `PYTHON/rna_file.ipynb` |
+| Independent cohort | Process the independent cohort for comparison with the main cohort. | `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
+| Differential expression analysis | Identify NMOSD-associated genes using Limma-voom, edgeR, and DESeq2. | `R/Limma.R`, `R/edgeR.R`, `R/DEseq2.R`, `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
+| Type I interferon-related gene set | Compare DEGs with Type I interferon and hallmark interferon gene sets. | `PYTHON/inteferon_geneset.ipynb`, the differential-expression scripts above |
+| Significant Type I interferon-related genes | Integrate DEG results and classify shared up- and down-regulated genes. | `R/DEGs_analysis(3 packages).R`, `PYTHON/DEG_up_down.ipynb` |
+
+Additional analysis files include PCA and batch-effect assessment (`R/log2cpm_PCA.R`, `R/TPM_PCA.R`, `R/Batch effect_PCA.R`), hierarchical clustering (`R/hirarchical_clustering.R`), cell-type deconvolution (`R/deconvolution_cell_type_bulk.R`), and functional enrichment analysis (`R/Pathway.R`).
