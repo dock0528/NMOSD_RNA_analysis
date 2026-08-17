@@ -45,9 +45,8 @@ The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are 
 | Adapter trimming | Removal of sequencing adapters. |  |
 | Mapping to the reference genome | Alignment to GRCh38. |  |
 | Transcript identification and gene expression | Use RSEM and STAR results to construct expression matrices and calculate FPKM/TPM values. | `python/FPKM_TPM.ipynb`, `python/TPM_my_with_external_data.ipynb`, `python/No_3_genes_TPM_my_with_external_data.ipynb`, `python/rna_file.ipynb` |
-| Independent cohort | Process the independent cohort for comparison with the main cohort. | `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
-| Differential expression analysis | Identify NMOSD-associated genes using Limma-voom, edgeR, and DESeq2. | `R/Limma.R`, `R/edgeR.R`, `R/DEseq2.R`, `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
-| Type I interferon-related gene set | Compare DEGs with Type I interferon and hallmark interferon gene sets. | `python/inteferon_geneset.ipynb`, the differential-expression scripts above |
+| Differential expression analysis | Compare NMOSD and healthy control samples in the main and independent cohorts using Limma-voom, edgeR, and DESeq2. | `R/Limma.R`, `R/edgeR.R`, `R/DEseq2.R`, `R/Limma_external.R`, `R/edgeR_external.R`, `R/DEseq2_external.R` |
+| Type I interferon-related gene set | Compare DEGs with Type I interferon and hallmark interferon gene sets. | `python/inteferon_geneset.ipynb` |
 | Significant Type I interferon-related genes | Integrate DEG results and classify shared up- and down-regulated genes. | `R/DEGs_analysis(3 packages).R`, `python/DEG_up_down.ipynb` |
 
 Additional analysis files include PCA and batch-effect assessment (`R/log2cpm_PCA.R`, `R/TPM_PCA.R`, `R/Batch effect_PCA.R`), hierarchical clustering (`R/hirarchical_clustering.R`), cell-type deconvolution (`R/deconvolution_cell_type_bulk.R`), and functional enrichment analysis (`R/Pathway.R`).
