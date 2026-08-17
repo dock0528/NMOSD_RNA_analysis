@@ -14,8 +14,8 @@ The repository uses R scripts and python notebooks. Specific software, package, 
 
 ```mermaid
 flowchart TD
-    A(["<div style='width:220px;height:56px;text-align:center;'>10 NMOSD bulk RNA-seq<br/>(FASTQ)</div>"])
-    B(["<div style='width:220px;height:56px;text-align:center;'>11 healthy control bulk RNA-seq<br/>(FASTQ)</div>"])
+    A(["<div style='width:300px;height:90px;text-align:center;'>10 NMOSD bulk RNA-seq<br/>(FASTQ)</div>"])
+    B(["<div style='width:300px;height:90px;text-align:center;'>11 healthy control bulk RNA-seq<br/>(FASTQ)</div>"])
     C(["FASTQ quality control<br/>(FastQC / MultiQC)"])
     D(["Adapter trimming<br/>(Cutadapt / Trimmomatic)"])
     E(["Mapping to the reference genome<br/>(STAR / GRCh38)"])
