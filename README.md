@@ -14,8 +14,8 @@ The repository uses R scripts and python notebooks. Specific software, package, 
 
 ```mermaid
 flowchart TD
-    A(["10 NMOSD bulk RNA-seq<br/>(FASTQ)"])
-    B(["11 healthy control bulk RNA-seq<br/>(FASTQ)"])
+    A(["<div style='width:220px;height:56px;text-align:center;'>10 NMOSD bulk RNA-seq<br/>(FASTQ)</div>"])
+    B(["<div style='width:220px;height:56px;text-align:center;'>11 healthy control bulk RNA-seq<br/>(FASTQ)</div>"])
     C(["FASTQ quality control<br/>(FastQC / MultiQC)"])
     D(["Adapter trimming<br/>(Cutadapt / Trimmomatic)"])
     E(["Mapping to the reference genome<br/>(STAR / GRCh38)"])
@@ -32,8 +32,6 @@ flowchart TD
 
     classDef normal fill:#ffffff,stroke:#555555,stroke-width:1px,color:#111111,font-weight:normal;
     class A,B,C,D,E,F,G,H,I,J normal;
-    style A width:220px,height:80px;
-    style B width:220px,height:80px;
 ```
 
 The FASTQ quality-control, adapter-trimming, genome-mapping, and RSEM steps are represented in the workflow for completeness. The repository mainly contains the processed RSEM and STAR results used by the downstream analyses.
